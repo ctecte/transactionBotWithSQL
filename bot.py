@@ -1,9 +1,10 @@
 import telebot
-from datetime import datetime
+from datetime import datetime, timedelta
 import configparser
 import MySQLdb
 import re
 import logging
+from collections import defaultdict
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -25,9 +26,80 @@ logger = logging.getLogger(__name__)
 conn = None
 cursor = None
 
+def format_message(results):
+    grouped = defaultdict(list)
+    for row in results:
+        date_str = row[1].strftime("%d-%m-%y")
+        grouped[date_str].append(row)
+
+    msg = "📆\n"
+
+    for date in sorted(grouped):
+        msg += f"{date}\n"
+        for row in grouped[date]:
+            # Truncate name if it's longer than 15 characters
+            name = row[2][:11] + ".." if len(row[2]) > 13 else row[2]
+            cost = f"${row[3]:.2f}"
+            qty = f"x{row[4]}" 
+            item_type = row[5].capitalize()
+
+            # Align all parts nicely to prevent wrapping
+            msg += f"▫️{name:<13} {cost} {qty:<3}{item_type}\n"
+        msg += "\n"
+    return msg
+
+@bot.message_handler(commands=['month'])
+def select_month(message):
+    chat_id = message.chat.id
+    text = message.text
+    try:
+        first_day = datetime.today().replace(day=1)
+        cursor.execute ("SELECT * from transactions where date >= %s order by date", (first_day,))
+        results = cursor.fetchall()
+
+        if not results:
+            bot.reply_to(message, f"No transactions found since {first_day}.")
+            return
+        else:
+            msg = format_message(results)
+            final_msg = f"📆 This month's Transactions:\n\n```{msg}```"
+            bot.send_message(chat_id, final_msg, parse_mode="Markdown")    
+    except Exception as e:
+        bot.send_message(chat_id, f"error {str(e)}")
+        logger.info(f"select specific error :{str(e)}")
+
+@bot.message_handler(commands=['week', 'today','yesterday'])
+def select_specific(message):
+    chat_id = message.chat.id
+    text = message.text
+    try:
+        command = "Today"
+        timeDelta = 0
+        if ("week" in text):
+            timeDelta = 7
+            command = "Week"
+        elif ("yesterday" in text):
+            timeDelta = 1
+            command = "Yesterday"
+        today = datetime.today().date()
+        dateToFind = today - timedelta(days=timeDelta)
+        cursor.execute ("SELECT * from transactions where date >= %s order by date", (dateToFind,))
+        results = cursor.fetchall()
+
+        if not results:
+            bot.reply_to(message, f"No transactions found since {dateToFind}.")
+            return
+        else:
+            msg = format_message(results)
+            final_msg = f"📆 {command}'s Transactions:\n\n```{msg}```"
+            bot.send_message(chat_id, final_msg, parse_mode="Markdown")    
+    except Exception as e:
+        bot.send_message(chat_id, f"error {str(e)}")
+        logger.info(f"select specific error :{str(e)}")
+
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
-    bot.reply_to(message, "Hi, I'm a transaction bot using a MySQL database to store your information")
+    bot.send_message(message.chat.id, "Hi, I'm a transaction bot using a MySQL database to store your information")
 
 def update_db(chat_id, transaction_id, column, new_value):
     try:
@@ -42,6 +114,7 @@ def update_db(chat_id, transaction_id, column, new_value):
 
 @bot.message_handler(commands=['delete'])
 def delete(message):
+    text = message.text
     match = re.match(r"^/delete\s+(\d+)$", text)
 
     if not match:
@@ -172,7 +245,7 @@ def parse_message(message):
         
         logger.info({"cost": cost, "name": name, "quantity": quantity})
         today = datetime.today().date()
-        insert_or_update_into_db(chat_id, today, cost, name, quantity, item_type)
+        insert_into_db(chat_id, today, cost, name, quantity, item_type)
         bot.reply_to(message, "Transaction added")
     else:
         bot.reply_to(message, "invalid format, please re-enter transaction. /start for template")
