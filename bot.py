@@ -5,6 +5,7 @@ import MySQLdb
 import re
 import logging
 from collections import defaultdict
+from telebot.types import BotCommand
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -25,6 +26,36 @@ logger = logging.getLogger(__name__)
 
 conn = None
 cursor = None
+
+@bot.message_handler(commands=["select"])
+def handle_select_query(message):
+    chat_id = message.chat.id
+    query = message.text.replace("/select", "", 1).strip()
+
+    if not query.lower().startswith("select"):
+        bot.reply_to(message, "❌ Only SELECT queries are allowed.")
+        return
+
+    try:
+        cursor.execute(query)
+        results = cursor.fetchall()
+
+        if not results:
+            bot.reply_to(message, "No results found.")
+            return
+
+        msg = f"📝 Results:\n\n"
+        for row in results[:10]:  # limit to 10 rows
+            msg += "▫️ " + " | ".join(str(col) for col in row) + "\n"
+        
+        if len(results) > 10:
+            msg += f"...and {len(results)-10} more rows."
+
+        bot.send_message(chat_id, msg)
+
+    except Exception as e:
+        bot.reply_to(message, f"❌ Query failed:\n{str(e)}")
+
 
 def format_message(results):
     grouped = defaultdict(list)
