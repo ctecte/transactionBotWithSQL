@@ -239,7 +239,13 @@ def backdate(message):
         # Match format: 120425 food $5.00 Chicken Rice x2
         match = re.match(r"(\d{6})\s+(\w+)\s+\$(\d+(?:\.\d{2})?)\s+(.+?)(?:\s+x(\d+))?$", text)
         if not match:
-            bot.reply_to(message, "❌ Invalid format. Use: /backdate <DDMMYY> <type> $<cost> <name> x<Qty>")
+            bot.reply_to(message,
+                "❌ Invalid format for backdated transaction.\n\n"
+                "💡 Correct format:\n"
+                "`/backdate <DDMMYY> <type> $<cost> <name> x<quantity>`\n\n"
+                "✅ Example:\n"
+                "`/backdate 120425 food $5.50 Chicken Rice x2`",
+                parse_mode="Markdown")
             return
         
         date_str = match.group(1)     # '120425'
