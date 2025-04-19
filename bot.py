@@ -128,7 +128,33 @@ def select_specific(message):
         bot.send_message(chat_id, f"error {str(e)}")
         logger.info(f"select specific error :{str(e)}")
 
-@bot.message_handler(commands=['start', 'help'])
+@bot.message_handler(commands=["help"])
+def show_help(message):
+    bot.reply_to(message,
+    "🧾 *Welcome to TransactionBot!*\n"
+    "Track your spending by logging transactions into a MySQL database.\n\n"
+    "📌 *How to add a transaction:*\n"
+    "`/<type> $<cost> <name> x<qty>`\n"
+    "• Types: `food`, `drink`, `item`, `grocery`\n"
+    "• Quantity is optional (defaults to 1)\n\n"
+    "✅ *Examples:*\n"
+    "`/food $5.50 Chicken Rice`\n"
+    "`/drink $3.00 Iced Milo x2`\n\n"
+    "🕓 *Backdate a transaction:*\n"
+    "`/backdate <DDMMYY> <type> $<cost> <name> x<qty>`\n"
+    "`/backdate 120425 food $6.00 Char Kway Teow x1`\n\n"
+    "📅 *View recent transactions:*\n"
+    `/yesterday` – Yesterday's entries\n"
+    `/week` – Past 7 days\n"
+    `/month` – This month's transactions\n\n"
+    "🛠 *Other commands:*\n"
+    "`/update <id> <field> <new_value>` – Update a field\n"
+    "`/delete <id>` – Delete a transaction\n"
+    "`/select <query>` – Run a raw SELECT query\n\n"
+    "🔍 Need examples? Use `/help` anytime!",
+    parse_mode="Markdown")
+
+@bot.message_handler(commands=['start'])
 def send_welcome(message):
     bot.send_message(message.chat.id, "Hi, I'm a transaction bot using a MySQL database to store your information")
 
