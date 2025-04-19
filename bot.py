@@ -142,6 +142,7 @@ def show_help(message):
     "`/drink $3.00 Iced Milo x2`\n\n"
     "🕓 *Backdate a transaction:*\n"
     "`/backdate <DDMMYY> <type> $<cost> <name> x<qty>`\n"
+    "✅ *Examples:*\n"
     "`/backdate 120425 food $6.00 Char Kway Teow x1`\n\n"
     "📅 *View recent transactions:*\n"
     "`/yesterday` – Yesterday's entries\n"
