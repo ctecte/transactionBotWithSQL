@@ -281,8 +281,19 @@ def parse_message(message):
         insert_into_db(chat_id, today, cost, name, quantity, item_type)
         bot.reply_to(message, "Transaction added")
     else:
-        bot.reply_to(message, "invalid format, please re-enter transaction. /start for template")
-
+        bot.reply_to(message,
+            "❌ Invalid format!\n\n"
+            "💡 Please enter your transaction like this:\n"
+            "`/food $5.50 Chicken Rice x2`\n\n"
+            "📌 Format:\n"
+            "`/<type>` - One of: food, drink, item, grocery\n"
+            "`$<amount>` - Cost (with $ sign)\n"
+            "`<name>` - Name of the item\n"
+            "`x<quantity>` - Optional (defaults to 1)\n\n"
+            "✅ Example:\n"
+            "`/drink $3.00 Iced Milo`\n"
+            "`/grocery $7.20 Eggs x2`",
+            parse_mode="Markdown")
 
 
 def create_database(cursor, query):
