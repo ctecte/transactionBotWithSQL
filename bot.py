@@ -316,6 +316,21 @@ if __name__ == '__main__':
         """
         cursor.execute(sql_command)
         logger.info("transactions table created")
+        bot.set_my_commands([
+            BotCommand("start", "Show welcome message"),
+            BotCommand("help", "Show usage guide"),
+            BotCommand("food", "Add a food transaction"),
+            BotCommand("drink", "Add a drink transaction"),
+            BotCommand("item", "Add a miscellaneous item"),
+            BotCommand("grocery", "Add a grocery transaction"),
+            BotCommand("backdate", "Add a backdated transaction"),
+            BotCommand("week", "Show this week's transactions"),
+            BotCommand("month", "Show this month's transactions"),
+            BotCommand("yesterday", "Show yesterday's transactions"),
+            BotCommand("select", "Run a SELECT SQL query"),
+            BotCommand("update", "Update a transaction field"),
+            BotCommand("delete", "Delete a transaction by ID"),
+        ])
         logger.info("Bot started..")
         bot.infinity_polling()
     except Exception as e:
