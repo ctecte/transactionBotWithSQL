@@ -225,6 +225,8 @@ def get_item_type(message_text):
         return "Groceries"
     elif "item" in message_text:
         return "Item"
+    elif "dessert" in message_text:
+        return "Dessert"
     else:
         return "Others"
 
@@ -254,7 +256,7 @@ def backdate(message):
         logger.error(f"Backdate error: {str(e)}")
         bot.reply_to(message, f"❌ Error: {str(e)}")
 
-@bot.message_handler(commands=["food", "drink", "item", "grocery"])
+@bot.message_handler(commands=["food", "drink", "item", "grocery", "dessert"])
 def parse_message(message):
     chat_id = message.chat.id
     
@@ -321,6 +323,7 @@ if __name__ == '__main__':
             BotCommand("help", "Show usage guide"),
             BotCommand("food", "Add a food transaction"),
             BotCommand("drink", "Add a drink transaction"),
+            BotCommand("dessert", "Add a dessert transaction"),
             BotCommand("item", "Add a miscellaneous item"),
             BotCommand("grocery", "Add a grocery transaction"),
             BotCommand("backdate", "Add a backdated transaction"),
