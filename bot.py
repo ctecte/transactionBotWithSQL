@@ -27,8 +27,26 @@ logger = logging.getLogger(__name__)
 conn = None
 cursor = None
 
+def get_connection():
+    return MySQLdb.connect(
+        host=HOSTNAME,
+        user=USERNAME,
+        passwd=PASSWORD,
+        db=DATABASE,
+        autocommit=True
+    )
+
+def ensure_connection():
+    try:
+        conn.ping(reconnect=True)
+    except Exception:
+        logger.info("Reconnecting to MySQL...")
+        conn = get_connection()
+        cursor = conn.cursor()
+
 @bot.message_handler(commands=["select"])
 def handle_select_query(message):
+    ensure_connection()
     chat_id = message.chat.id
     query = message.text.replace("/select", "", 1).strip()
 
@@ -81,6 +99,7 @@ def format_message(results):
 
 @bot.message_handler(commands=['month'])
 def select_month(message):
+    ensure_connection()
     chat_id = message.chat.id
     text = message.text
     try:
@@ -101,6 +120,7 @@ def select_month(message):
 
 @bot.message_handler(commands=['week', 'today','yesterday'])
 def select_specific(message):
+    ensure_connection()
     chat_id = message.chat.id
     text = message.text
     try:
@@ -160,6 +180,7 @@ def send_welcome(message):
     bot.send_message(message.chat.id, "Hi, I'm a transaction bot using a MySQL database to store your information")
 
 def update_db(chat_id, transaction_id, column, new_value):
+    ensure_connection()
     try:
         query = f"UPDATE transactions SET {column} = %s WHERE id = %s"
         cursor.execute(query, (new_value, transaction_id))
@@ -172,6 +193,7 @@ def update_db(chat_id, transaction_id, column, new_value):
 
 @bot.message_handler(commands=['delete'])
 def delete(message):
+    ensure_connection()
     text = message.text
     match = re.match(r"^/delete\s+(\d+)$", text)
 
@@ -191,6 +213,7 @@ def delete(message):
 
 @bot.message_handler(commands=['update'])
 def update(message):
+    ensure_connection()
     chat_id = message.chat.id
     text = text = message.text.replace("/update", "", 1).strip()
     match = re.match(r"^(\d+)\s+(\w+)\s+(.+)$", text)
@@ -219,6 +242,7 @@ def update(message):
     
 
 def insert_into_db(chat_id, date, cost, name, quantity, item_type):
+    ensure_connection()
     try :
         # check if there is an entry of this item here already
         cursor.execute("SELECT quantity from transactions where date = %s and name = %s", (date,name,))
@@ -259,6 +283,7 @@ def get_item_type(message_text):
 
 @bot.message_handler(commands=['backdate'])
 def backdate(message):
+    ensure_connection()
     chat_id = message.chat.id
     # remove the /backdate
     text = message.text.replace("/backdate", "", 1).strip()
