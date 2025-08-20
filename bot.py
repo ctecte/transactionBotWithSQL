@@ -1,5 +1,6 @@
 import telebot
 from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 import configparser
 import MySQLdb
 import re
@@ -27,8 +28,28 @@ logger = logging.getLogger(__name__)
 conn = None
 cursor = None
 
+
+def get_connection():
+    return MySQLdb.connect(
+        host=HOSTNAME,
+        user=USERNAME,
+        passwd=PASSWORD,
+        db=DATABASE,
+        autocommit=True
+    )
+
+def ensure_connection():
+    global conn, cursor
+    try:
+        conn.ping(reconnect=True)
+    except Exception:
+        logger.info("Reconnecting to MySQL...")
+        conn = get_connection()
+        cursor = conn.cursor()
+
 @bot.message_handler(commands=["select"])
 def handle_select_query(message):
+    ensure_connection()
     chat_id = message.chat.id
     query = message.text.replace("/select", "", 1).strip()
 
@@ -81,11 +102,12 @@ def format_message(results):
 
 @bot.message_handler(commands=['month'])
 def select_month(message):
+    ensure_connection()
     chat_id = message.chat.id
     text = message.text
     try:
-        first_day = datetime.today().replace(day=1)
-        cursor.execute ("SELECT * from transactions where date >= %s order by date", (first_day,))
+        first_day = datetime.today().replace(day=1).date()
+        cursor.execute ("SELECT * from transactions where date >= %s and chat_id = %s order by date", (first_day, chat_id))
         results = cursor.fetchall()
 
         if not results:
@@ -95,12 +117,13 @@ def select_month(message):
             msg = format_message(results)
             final_msg = f"📆 This month's Transactions:\n\n```{msg}```"
             bot.send_message(chat_id, final_msg, parse_mode="Markdown")    
-    except Exception as e:
+    except: 
         bot.send_message(chat_id, f"error {str(e)}")
         logger.info(f"select specific error :{str(e)}")
 
 @bot.message_handler(commands=['week', 'today','yesterday'])
 def select_specific(message):
+    ensure_connection()
     chat_id = message.chat.id
     text = message.text
     try:
@@ -114,7 +137,7 @@ def select_specific(message):
             command = "Yesterday"
         today = datetime.today().date()
         dateToFind = today - timedelta(days=timeDelta)
-        cursor.execute ("SELECT * from transactions where date >= %s order by date", (dateToFind,))
+        cursor.execute ("SELECT * from transactions where date >= %s and chat_id = %s order by date", (dateToFind, chat_id))
         results = cursor.fetchall()
 
         if not results:
@@ -160,6 +183,7 @@ def send_welcome(message):
     bot.send_message(message.chat.id, "Hi, I'm a transaction bot using a MySQL database to store your information")
 
 def update_db(chat_id, transaction_id, column, new_value):
+    ensure_connection()
     try:
         query = f"UPDATE transactions SET {column} = %s WHERE id = %s"
         cursor.execute(query, (new_value, transaction_id))
@@ -172,6 +196,7 @@ def update_db(chat_id, transaction_id, column, new_value):
 
 @bot.message_handler(commands=['delete'])
 def delete(message):
+    ensure_connection()
     text = message.text
     match = re.match(r"^/delete\s+(\d+)$", text)
 
@@ -191,6 +216,7 @@ def delete(message):
 
 @bot.message_handler(commands=['update'])
 def update(message):
+    ensure_connection()
     chat_id = message.chat.id
     text = text = message.text.replace("/update", "", 1).strip()
     match = re.match(r"^(\d+)\s+(\w+)\s+(.+)$", text)
@@ -219,6 +245,7 @@ def update(message):
     
 
 def insert_into_db(chat_id, date, cost, name, quantity, item_type):
+    ensure_connection()
     try :
         # check if there is an entry of this item here already
         cursor.execute("SELECT quantity from transactions where date = %s and name = %s", (date,name,))
@@ -226,10 +253,10 @@ def insert_into_db(chat_id, date, cost, name, quantity, item_type):
 
         if result is None:
             cursor.execute("""
-                        INSERT INTO transactions (date, name, cost, quantity, type) 
-                        values (%s, %s, %s, %s, %s)
+                        INSERT INTO transactions (date, name, cost, quantity, type, chat_id) 
+                        values (%s, %s, %s, %s, %s, %s)
                         """,
-                        (date, name, cost, quantity, item_type))
+                        (date, name, cost, quantity, item_type, chat_id))
         else :
             current_quantity = result[0]
             updated_quantity = int(current_quantity) + quantity
@@ -259,6 +286,7 @@ def get_item_type(message_text):
 
 @bot.message_handler(commands=['backdate'])
 def backdate(message):
+    ensure_connection()
     chat_id = message.chat.id
     # remove the /backdate
     text = message.text.replace("/backdate", "", 1).strip()
@@ -312,7 +340,7 @@ def parse_message(message):
         logger.info({"cost": cost, "name": name, "quantity": quantity})
         today = datetime.today().date()
         insert_into_db(chat_id, today, cost, name, quantity, item_type)
-        bot.reply_to(message, "Transaction added")
+        bot.reply_to(message, "Transaction added bye")
     else:
         bot.reply_to(message,
             "❌ Invalid format!\n\n"
@@ -328,6 +356,34 @@ def parse_message(message):
             "`/grocery $7.20 Eggs x2`",
             parse_mode="Markdown")
 
+@bot.message_handler(commands=['summary'])
+def get_summary(message):
+    chat_id = message.chat.id
+    
+    # Perhaps my format should be -
+    # if summary has no arguments passed, return this month - 
+    # arguments to take should be MMYY eg july 2025 0725 - 
+    # should add a check for today MMYY >= MMYY -
+    # else return no data if fetchall gives nothing back. 
+    dt_string = message.text
+
+    target_month = datetime.today().date()
+
+    if(len(dt_string) == 4 and dt_string.isnumeric()):
+        target_month = datetime.strptime(f"{dt_string};01", "%m%y;%d")
+    else:
+        bot.reply_to(message, "Please input a 4 digit string, MMYY\nEg July 2025: 0725")
+        return
+
+    
+    # DOES NOT WORK IN DECEMBER
+    # next_month = current_month.month + 1 - 
+
+    next_month = target_month + relativedelta(months=1)
+    
+    # need to implement the query and format the return message .
+    # query where month > target but smaller than next month
+    
 
 def create_database(cursor, query):
     try:
@@ -352,6 +408,7 @@ if __name__ == '__main__':
         # create transactions table
         sql_command = """
         CREATE TABLE IF NOT EXISTS transactions (
+            chat_id VARCHAR(20),
             id INTEGER PRIMARY KEY AUTO_INCREMENT,
             date DATE,
             name VARCHAR(45),
@@ -377,6 +434,7 @@ if __name__ == '__main__':
             BotCommand("select", "Run a SELECT SQL query"),
             BotCommand("update", "Update a transaction field"),
             BotCommand("delete", "Delete a transaction by ID"),
+            BotCommand("today", "Show today's transactions")
         ])
         logger.info("Bot started..")
         bot.infinity_polling()

@@ -1,0 +1,7 @@
+[mysqld]
+wait_timeout = 28800
+interactive_timeout = 28800
+innodb_buffer_pool_size = 64M
+key_buffer_size = 16M
+max_connections = 20
+max_allowed_packet=64M
