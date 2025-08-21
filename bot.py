@@ -358,6 +358,7 @@ def parse_message(message):
 
 @bot.message_handler(commands=['summary'])
 def get_summary(message):
+    ensure_connection()
     chat_id = message.chat.id
     
     # Perhaps my format should be -
@@ -365,11 +366,12 @@ def get_summary(message):
     # arguments to take should be MMYY eg july 2025 0725 - 
     # should add a check for today MMYY >= MMYY -
     # else return no data if fetchall gives nothing back. 
-    dt_string = message.text
+    dt_string = message.text.replace("/summary", "", 1).strip()
 
     target_month = datetime.today().date()
-
-    if(len(dt_string) == 4 and dt_string.isnumeric()):
+    if (dt_string == ""):
+        target_month = target_month.replace(day=1)
+    elif (len(dt_string) == 4 and dt_string.isnumeric()):
         target_month = datetime.strptime(f"{dt_string};01", "%m%y;%d")
     else:
         bot.reply_to(message, "Please input a 4 digit string, MMYY\nEg July 2025: 0725")
@@ -380,6 +382,14 @@ def get_summary(message):
     # next_month = current_month.month + 1 - 
 
     next_month = target_month + relativedelta(months=1)
+    cursor.execute("select * from transactions where date < %s and date >= %s", (next_month, target_month,))
+    result = cursor.fetchall()
+    try:
+        msg = format_message(result)
+        msg = f"Here is the summary for {target_month.strftime("%B")}\n\n" + msg
+        bot.send_message(chat_id, msg)
+    except Exception as e: 
+        bot.send_message(chat_id, str(e))
     
     # need to implement the query and format the return message .
     # query where month > target but smaller than next month
