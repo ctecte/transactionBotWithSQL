@@ -373,13 +373,13 @@ def calculate_summary(results, num_days):
         'Dessert': 0,
         'Others': 0
     }
-    # chat_id VARCHAR(20),
-    # id INTEGER PRIMARY KEY AUTO_INCREMENT,
-    # date DATE,
-    # name VARCHAR(45),
-    # cost DECIMAL(6,2),
-    # quantity INT,
-    # type VARCHAR(10)
+    # [0] id INTEGER PRIMARY KEY AUTO_INCREMENT,
+    # [1] date DATE,
+    # [2] name VARCHAR(45),
+    # [3] cost DECIMAL(6,2),
+    # [4] quantity INT,
+    # [5] type VARCHAR(10),
+    # [6] chat_id VARCHAR(20)
     most_expensive_price = None
     most_expensive_name = None
     quantity = 1
@@ -404,8 +404,6 @@ def calculate_summary(results, num_days):
     if most_expensive_price:
         message += f"\n **Most Expensive Transaction**\n"
         message += f"{most_expensive_name} x{quantity} : {most_expensive_price}"
-        # message += f"\n🏆 **Most Expensive Transaction:**\n"
-        # message += f"- {most_expensive[2]}: {most_expensive[1]} - ${most_expensive[4]:.2f} ({most_expensive[6]})"
 
     return message        
     
@@ -481,13 +479,13 @@ if __name__ == '__main__':
         # create transactions table
         sql_command = """
         CREATE TABLE IF NOT EXISTS transactions (
-            chat_id VARCHAR(20),
             id INTEGER PRIMARY KEY AUTO_INCREMENT,
             date DATE,
             name VARCHAR(45),
             cost DECIMAL(6,2),
             quantity INT,
-            type VARCHAR(10)
+            type VARCHAR(10),
+            chat_id VARCHAR(20)
         );
         """
         cursor.execute(sql_command)
