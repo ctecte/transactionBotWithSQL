@@ -89,13 +89,13 @@ def format_message(results):
     for date in sorted(grouped):
         msg += f"{date}\n"
         for row in grouped[date]:
-            # Truncate name if it's longer than 15 characters
+            # Truncate name if it's longer than 15 
             name = row[2][:11] + ".." if len(row[2]) > 13 else row[2]
             cost = f"${row[3]:.2f}"
             qty = f"x{row[4]}" 
             item_type = row[5].capitalize()
 
-            # Align all parts nicely to prevent wrapping
+            # Align parts 
             msg += f"▫️{name:<13} {cost} {qty:<3}{item_type}\n"
         msg += "\n"
     return msg
@@ -356,6 +356,61 @@ def parse_message(message):
             "`/grocery $7.20 Eggs x2`",
             parse_mode="Markdown")
 
+def calculate_summary(results, num_days):
+    if (results == None):
+        return "No transaction records found"
+    # i need to go through every result i got
+    # after that i need to sort them into results that ive obtained
+    # I should use the array of possible categories, and then add the cost to them
+    # Total spent on these categories
+    # Following that we calculate the average spent a day on each category, just divide by number of days
+    # After that we take note and return the most expensvie transaction for the values
+    categories = {
+        'Food': 0,
+        'Drink': 0,
+        'Groceries': 0,
+        'Item': 0,
+        'Dessert': 0,
+        'Others': 0
+    }
+    # chat_id VARCHAR(20),
+    # id INTEGER PRIMARY KEY AUTO_INCREMENT,
+    # date DATE,
+    # name VARCHAR(45),
+    # cost DECIMAL(6,2),
+    # quantity INT,
+    # type VARCHAR(10)
+    most_expensive_price = None
+    most_expensive_name = None
+    quantity = 1
+    for row in results:
+        try:
+            # logger.info(row)
+            logger.info(f"{row[5]} is of type {type(row[5])}")
+            categories[row[5]] += (row[3]*row[4])
+            if (most_expensive_price == None or row[4]*row[3] > most_expensive_price):
+                most_expensive_price = row[4]*row[3]
+                most_expensive_name = row[2]
+                quantity = row[4]
+        except Exception as e:
+            logger.info(f"str{e}")
+    
+    message = "💰 **Total Spending per Category:**\n"
+    for cat, total in categories.items():
+        if (num_days != 0):
+            avg = total / num_days
+            message += f"- {cat}: ${total:.2f} (avg/day: ${avg:.2f})\n"
+
+    if most_expensive_price:
+        message += f"\n **Most Expensive Transaction**\n"
+        message += f"{most_expensive_name} x{quantity} : {most_expensive_price}"
+        # message += f"\n🏆 **Most Expensive Transaction:**\n"
+        # message += f"- {most_expensive[2]}: {most_expensive[1]} - ${most_expensive[4]:.2f} ({most_expensive[6]})"
+
+    return message        
+    
+
+
 @bot.message_handler(commands=['summary'])
 def get_summary(message):
     ensure_connection()
@@ -367,9 +422,10 @@ def get_summary(message):
     # should add a check for today MMYY >= MMYY -
     # else return no data if fetchall gives nothing back. 
     dt_string = message.text.replace("/summary", "", 1).strip()
-
+    num_days = None
     target_month = datetime.today().date()
     if (dt_string == ""):
+        num_days = datetime.today().date().day
         target_month = target_month.replace(day=1)
     elif (len(dt_string) == 4 and dt_string.isnumeric()):
         target_month = datetime.strptime(f"{dt_string};01", "%m%y;%d")
@@ -382,10 +438,17 @@ def get_summary(message):
     # next_month = current_month.month + 1 - 
 
     next_month = target_month + relativedelta(months=1)
+
+    if (num_days == None):
+        last_day_of_month = next_month - relativedelta(days=1)
+        num_days = last_day_of_month.day
+
     cursor.execute("select * from transactions where date < %s and date >= %s", (next_month, target_month,))
     result = cursor.fetchall()
+    # logger.info(result)
+
     try:
-        msg = format_message(result)
+        msg = calculate_summary(result, num_days)
         msg = f"Here is the summary for {target_month.strftime("%B")}\n\n" + msg
         bot.send_message(chat_id, msg)
     except Exception as e: 
