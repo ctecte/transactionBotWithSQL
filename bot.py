@@ -175,6 +175,7 @@ def show_help(message):
     "`/update <id> <field> <new_value>` – Update a field\n"
     "`/delete <id>` – Delete a transaction\n"
     "`/select <query>` – Run a raw SELECT query\n\n"
+    "/summary <MMYY> - Leave blank for current month, 0725 for July 2025"
     "🔍 Need examples? Use `/help` anytime!",
     parse_mode="Markdown")
 
@@ -395,14 +396,14 @@ def calculate_summary(results, num_days):
         except Exception as e:
             logger.info(f"str{e}")
     
-    message = "💰 **Total Spending per Category:**\n"
+    message = "💰 *Total Spending per Category:*\n"
     for cat, total in categories.items():
         if (num_days != 0):
             avg = total / num_days
             message += f"- {cat}: ${total:.2f} (avg/day: ${avg:.2f})\n"
 
     if most_expensive_price:
-        message += f"\n **Most Expensive Transaction**\n"
+        message += f"\n *Most Expensive Transaction*\n"
         message += f"{most_expensive_name} x{quantity} : {most_expensive_price}"
 
     return message        
@@ -448,7 +449,7 @@ def get_summary(message):
     try:
         msg = calculate_summary(result, num_days)
         msg = f"Here is the summary for {target_month.strftime("%B")}\n\n" + msg
-        bot.send_message(chat_id, msg)
+        bot.send_message(chat_id, msg,parse_mode="Markdown")
     except Exception as e: 
         bot.send_message(chat_id, str(e))
     
@@ -505,7 +506,8 @@ if __name__ == '__main__':
             BotCommand("select", "Run a SELECT SQL query"),
             BotCommand("update", "Update a transaction field"),
             BotCommand("delete", "Delete a transaction by ID"),
-            BotCommand("today", "Show today's transactions")
+            BotCommand("today", "Show today's transactions"),
+            BotCommand("summary", "Show month's summary")
         ])
         logger.info("Bot started..")
         bot.infinity_polling()
