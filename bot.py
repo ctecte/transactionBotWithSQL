@@ -47,35 +47,37 @@ def ensure_connection():
         conn = get_connection()
         cursor = conn.cursor()
 
-@bot.message_handler(commands=["select"])
-def handle_select_query(message):
-    ensure_connection()
-    chat_id = message.chat.id
-    query = message.text.replace("/select", "", 1).strip()
+# This command is inherently insecure. I need to add a validation or admin authorisation for this 
+# to even be considered having around
+# @bot.message_handler(commands=["select"])
+# def handle_select_query(message):
+#     ensure_connection()
+#     chat_id = message.chat.id
+#     query = message.text.replace("/select", "", 1).strip()
 
-    if not query.lower().startswith("select"):
-        bot.reply_to(message, "❌ Only SELECT queries are allowed.")
-        return
+#     if not query.lower().startswith("select"):
+#         bot.reply_to(message, "Only SELECT queries are allowed.")
+#         return
 
-    try:
-        cursor.execute(query)
-        results = cursor.fetchall()
+#     try:
+#         cursor.execute(query)
+#         results = cursor.fetchall()
 
-        if not results:
-            bot.reply_to(message, "No results found.")
-            return
+#         if not results:
+#             bot.reply_to(message, "No results found.")
+#             return
 
-        msg = f"📝 Results:\n\n"
-        for row in results[:10]:  # limit to 10 rows
-            msg += "▫️ " + " | ".join(str(col) for col in row) + "\n"
+#         msg = f"📝 Results:\n\n"
+#         for row in results[:10]:  # limit to 10 rows
+#             msg += "▫️ " + " | ".join(str(col) for col in row) + "\n"
         
-        if len(results) > 10:
-            msg += f"...and {len(results)-10} more rows."
+#         if len(results) > 10:
+#             msg += f"...and {len(results)-10} more rows."
 
-        bot.send_message(chat_id, msg)
+#         bot.send_message(chat_id, msg)
 
-    except Exception as e:
-        bot.reply_to(message, f"❌ Query failed:\n{str(e)}")
+#     except Exception as e:
+#         bot.reply_to(message, f"Query failed:\n{str(e)}")
 
 
 def format_message(results):
