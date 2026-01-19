@@ -1,0 +1,7 @@
+services:
+  bot: 
+    develop:
+      watch:
+        - action: restart 
+          path: ./bot.py 
+          target: /app/bot.py

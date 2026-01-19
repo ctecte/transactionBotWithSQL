@@ -202,6 +202,7 @@ def delete(message):
     ensure_connection()
     text = message.text
     match = re.match(r"^/delete\s+(\d{6})\s+", text)
+    chat_id = message.chat.id
 
     if not match:
         bot.reply_to(message, "❌ Invalid format. Use: /delete DDMMYY. Eg /delete 010725")
