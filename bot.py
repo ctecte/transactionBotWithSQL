@@ -201,13 +201,16 @@ def update_db(chat_id, transaction_id, column, new_value):
 def delete(message):
     ensure_connection()
     text = message.text
-    match = re.match(r"^/delete\s+(\d+)$", text)
+    match = re.match(r"^/delete\s+(\d{6})\s+", text)
 
     if not match:
-        bot.reply_to(message, "❌ Invalid format. Use: /delete <id>")
+        bot.reply_to(message, "❌ Invalid format. Use: /delete DDMMYY. Eg /delete 010725")
         return
-
-    transaction_id = int(match.group(1))
+    
+    text = text.replace("/delete", "", 1).strip()
+    date_str = match.group(1) 
+    date = datetime.strptime(date_str, "%d%m%y").date()
+    
     try:
         cursor.execute("DELETE FROM transactions WHERE id = %s", (transaction_id,))
         conn.commit()
