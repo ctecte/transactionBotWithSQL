@@ -243,32 +243,84 @@ def delete(message):
         # further ask about which transaction to delete that day. 
         # next_step_handler
         cursor.execute("SELECT * from transactions where date = %s and chat_id = %s", (date, chat_id))
-        results = cursor.fetchall()
+        transactions = cursor.fetchall()
 
-        bot.reply_to(message, f"Which transaction(s) would you like to delete?\n{format_message_with_number(results)}")
+        if not transactions:
+            bot.reply_to(message, f"No transactions found on {date_str}")
+
         # send a list of items with the counter next to it. 1. caifan $2 etc 
-        bot.register_next_step_handler(message, process_delete_request)
+        bot.reply_to(message, f"Which transaction(s) would you like to delete?\n{format_message_with_number(transactions)}")
+
+        # calls the next function to await the user input
+        bot.register_next_step_handler(message, process_delete_request, transactions)
     except Exception as e:
         bot.reply_to(message, f"{str(e)}")
         logging.info( f"{str(e)}")
 
-def process_delete_request(message):
+def process_delete_request(message, transactions):
     text = message.text
     # regex should match 1-3, 5,6,  10-12
     # separate by commas, then check if the group contains '-'
     # do a for loop if it contains '-'
     # must account for offsetting by 1 index (since array will be 0 index will start from 1)
-    regex = ""
-    match = re.match(regex, text)
 
-    if not match: 
-        bot.reply_to(message, "Sorry, I don't understand. Please tell me which transactions to delete again.\nEg: regex should match 1-3, 5,6,  10-12")
-        # do i call the function back again?
-        # bot.register_next_step_handler(message, process_delete_request)
+    if text.lower().strip() == '/cancel':
+        bot.clear_step_handler_by_chat_id(message.chat.id)
+        bot.reply_to(message, "❌ Operation cancelled.")
+        return
+
+    regex = r"\d+(?:-\d+)?"
+    matches = re.findall(regex, text)
+
+    if not matches: 
+        bot.reply_to(message, "Sorry, I don't understand. Please tell me which transactions to delete again.\nEg: regex should match 1-3, 5,6,  10-12\n/cancel to stop.")
+        bot.register_next_step_handler(message, process_delete_request, transactions)
 
     # write a function to parse the regex and determine which ones to remove
-    list_of_transactions_to_delete = parse_regex(match)
-    actual_delete(list_of_transactions_to_delete)
+    deletion_indexes = []
+    
+    for match in matches:
+        if '-' in match:
+            start, end = match.split('-')
+            if int(start) < int(end):
+                bot.reply_to(message, f"I dont understand this range {start} to {end}.\nIs the end smaller than the start?")
+                return
+            for x in range(int(start), int(end) + 1):
+                deletion_indexes.append(int(x) - 1)
+        else: 
+            deletion_indexes.append(int(match) - 1)
+
+    deletion_indexes = sorted(set(deletion_indexes))
+
+    transaction_ids_to_delete = []
+    for delete_index in deletion_indexes:
+        transaction_id = transactions[delete_index][0] # first col of the row is the id, or is it?
+        transaction_ids_to_delete.append(transaction_id)
+        
+    if not transaction_ids_to_delete:
+        bot.reply_to(message, "I'm confused. There's no transaction ID to delete??")
+        return
+    try:
+        delete_from_db(transaction_ids_to_delete)
+        bot.reply_to(message, "Successfully deleted the expenses.")
+    except Exception as e:
+        logging.error(f"Delete error: {e}")
+        connection.rollback()
+        raise    
+
+def delete_from_db(transaction_ids_to_delete):
+    # instead of for looping each delete, should create a list with the ids to delete, the 
+    # delete in one query with
+    
+    # this makes (%s,%s,%s) etc
+    placeholder = ','.join(['%s'] * len(transaction_ids_to_delete))
+    query = f"DELETE FROM transactions WHERE id IN ({placeholder})"
+
+    # pass in the list with the query formed with placeholder
+    cursor.execute(query, transaction_ids_to_delete)
+    conn.commit()
+
+
 
 @bot.message_handler(commands=['update'])
 def update(message):
