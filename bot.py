@@ -6,6 +6,7 @@ import MySQLdb
 import re
 import logging
 from collections import defaultdict
+from telebot import types
 from telebot.types import BotCommand
 
 config = configparser.ConfigParser()
@@ -99,6 +100,29 @@ def format_message(results):
 
             # Align parts 
             msg += f"▫️{name:<13} {cost} {qty:<3}{item_type}\n"
+        msg += "\n"
+    return msg
+
+def format_message_with_number(results):
+    grouped = defaultdict(list)
+    for row in results:
+        date_str = row[1].strftime("%d-%m-%y")
+        grouped[date_str].append(row)
+
+    msg = "📆\n"
+    for date in sorted(grouped):
+        idx = 1
+        msg += f"{date}\n"
+        for row in grouped[date]:
+            # Truncate name if it's longer than 15 
+            name = row[2][:11] + ".." if len(row[2]) > 13 else row[2]
+            cost = f"${row[3]:.2f}"
+            qty = f"x{row[4]}" 
+            item_type = row[5].capitalize()
+
+            # Align parts 
+            msg += f"{idx}. {name:<13} {cost} {qty:<3}{item_type}\n"
+            idx += 1
         msg += "\n"
     return msg
 
@@ -201,7 +225,7 @@ def update_db(chat_id, transaction_id, column, new_value):
 def delete(message):
     ensure_connection()
     text = message.text
-    match = re.match(r"^/delete\s+(\d{6})\s+", text)
+    match = re.match(r"^\/delete\s+(\d{6})\s*", text)
     chat_id = message.chat.id
 
     if not match:
@@ -209,17 +233,42 @@ def delete(message):
         return
     
     text = text.replace("/delete", "", 1).strip()
-    date_str = match.group(1) 
+    date_str = match.group(1)
     date = datetime.strptime(date_str, "%d%m%y").date()
     
+    # debug statement
+    bot.reply_to(message, date_str)
+    
     try:
-        cursor.execute("DELETE FROM transactions WHERE id = %s", (transaction_id,))
-        conn.commit()
-        bot.reply_to(message, f"✅ Entry {transaction_id} deleted.")
-        logging.info(f"Entry {transaction_id} deleted.")
+        # further ask about which transaction to delete that day. 
+        # next_step_handler
+        cursor.execute("SELECT * from transactions where date = %s and chat_id = %s", (date, chat_id))
+        results = cursor.fetchall()
+
+        bot.reply_to(message, f"Which transaction(s) would you like to delete?\n{format_message_with_number(results)}")
+        # send a list of items with the counter next to it. 1. caifan $2 etc 
+        bot.register_next_step_handler(message, process_delete_request)
     except Exception as e:
         bot.reply_to(message, f"{str(e)}")
         logging.info( f"{str(e)}")
+
+def process_delete_request(message):
+    text = message.text
+    # regex should match 1-3, 5,6,  10-12
+    # separate by commas, then check if the group contains '-'
+    # do a for loop if it contains '-'
+    # must account for offsetting by 1 index (since array will be 0 index will start from 1)
+    regex = ""
+    match = re.match(regex, text)
+
+    if not match: 
+        bot.reply_to(message, "Sorry, I don't understand. Please tell me which transactions to delete again.\nEg: regex should match 1-3, 5,6,  10-12")
+        # do i call the function back again?
+        # bot.register_next_step_handler(message, process_delete_request)
+
+    # write a function to parse the regex and determine which ones to remove
+    list_of_transactions_to_delete = parse_regex(match)
+    actual_delete(list_of_transactions_to_delete)
 
 @bot.message_handler(commands=['update'])
 def update(message):
