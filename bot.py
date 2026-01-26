@@ -321,35 +321,36 @@ def delete_from_db(transaction_ids_to_delete):
     conn.commit()
 
 
+# /update function requires changes to make it more similar to the delete function. 
 
-@bot.message_handler(commands=['update'])
-def update(message):
-    ensure_connection()
-    chat_id = message.chat.id
-    text = text = message.text.replace("/update", "", 1).strip()
-    match = re.match(r"^(\d+)\s+(\w+)\s+(.+)$", text)
-    # expecting /update <id> <column_name> <data>
-    # /update 3 name Chicken Rice
-    # /update 4 date 101203
-    if not match:
-        bot.reply_to(message, "❌ Invalid format. \nUse: /update <id> <column_name> <data>")
-        return
+# @bot.message_handler(commands=['update'])
+# def update(message):
+#     ensure_connection()
+#     chat_id = message.chat.id
+#     text = text = message.text.replace("/update", "", 1).strip()
+#     match = re.match(r"^(\d+)\s+(\w+)\s+(.+)$", text)
+#     # expecting /update <id> <column_name> <data>
+#     # /update 3 name Chicken Rice
+#     # /update 4 date 101203
+#     if not match:
+#         bot.reply_to(message, "❌ Invalid format. \nUse: /update <id> <column_name> <data>")
+#         return
     
-    transaction_id = int(match.group(1))
-    column = match.group(2).lower()
-    new_value = match.group(3).strip()
+#     transaction_id = int(match.group(1))
+#     column = match.group(2).lower()
+#     new_value = match.group(3).strip()
 
-    try:
-        if column == 'date':
-            new_value = datetime.strptime(new_value, "%d%m%y").date()
-        elif column == 'cost':
-            new_value = float(new_value)
-        elif column == 'quantity':
-            new_value = int(new_value)
-        update_db(chat_id, transaction_id, column, new_value)
-    except Exception as e:
-        bot.send_message(chat_id, {str(e)})
-        logger.info({str(e)})
+#     try:
+#         if column == 'date':
+#             new_value = datetime.strptime(new_value, "%d%m%y").date()
+#         elif column == 'cost':
+#             new_value = float(new_value)
+#         elif column == 'quantity':
+#             new_value = int(new_value)
+#         update_db(chat_id, transaction_id, column, new_value)
+#     except Exception as e:
+#         bot.send_message(chat_id, {str(e)})
+#         logger.info({str(e)})
     
 
 def insert_into_db(chat_id, date, cost, name, quantity, item_type):
