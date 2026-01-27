@@ -1,4 +1,5 @@
 # Telebot expense tracker
+<img width="1556" height="1250" alt="image" src="https://github.com/user-attachments/assets/343a3f74-2707-4d85-92e7-1681a01c863b" />
 
 Demo @transactionSQLbot
 
@@ -10,3 +11,6 @@ Backend python script interacts with the MySQL database to insert and fetch reco
 
 Records are kept private by allowing access to only the specific chat_id that is established when user first interacts with the bot. ie You cannot see other peoples' transactions
 
+<img width="1189" height="960" alt="image" src="https://github.com/user-attachments/assets/d658d105-701b-44c1-8692-7b51333e5dd3" />
+
+Summary function to provide insight into daily spendings
