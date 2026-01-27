@@ -19,7 +19,7 @@ Summary function to provide insight into daily spendings
 To self host, create a config.ini file and enter the details accordingly. 
 ```
 [default]
-# obtained from BotFather
+# obtained from BotFather, below token is an example token.
 bot_token = 7816870843:AAFJdCGmCtzP7q-abcdefghsdafjkasdf
 
 # Replace with the database credentials accordingly, which can be changed in the docker-compose.yml
@@ -28,3 +28,4 @@ username = transaction_user
 password = transaction_pw
 database = transactiondb
 ```
+
