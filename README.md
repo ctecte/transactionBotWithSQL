@@ -14,3 +14,17 @@ Records are kept private by allowing access to only the specific chat_id that is
 <img width="1189" height="960" alt="image" src="https://github.com/user-attachments/assets/d658d105-701b-44c1-8692-7b51333e5dd3" />
 
 Summary function to provide insight into daily spendings
+
+# Self hosting
+To self host, create a config.ini file and enter the details accordingly. 
+```
+[default]
+# obtained from BotFather
+bot_token = 7816870843:AAFJdCGmCtzP7q-abcdefghsdafjkasdf
+
+# Replace with the database credentials accordingly, which can be changed in the docker-compose.yml
+hostname = mysql
+username = transaction_user
+password = transaction_pw
+database = transactiondb
+```
